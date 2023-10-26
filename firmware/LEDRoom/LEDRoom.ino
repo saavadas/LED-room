@@ -9,6 +9,7 @@
   Нравится, как написан код? Поддержи автора! https://alexgyver.ru/support_alex/
   Автор: AlexGyver Technologies, 2019
   https://AlexGyver.ru/
+  Модифициравно для собственных целей: https://github.com/saavadas
 */
 
 struct Step {
@@ -16,30 +17,28 @@ struct Step {
   uint16_t night_mode_bitmask;  
 };
 
-#define STRIP_LED_AMOUNT 256  // количество чипов WS2811/WS2812 на всех ступеньках. Для WS2811 кол-во чипов = кол-во светодиодов / 3
-#define STEP_AMOUNT 16        // количество ступенек
+#define STRIP_LED_AMOUNT 300  // количество чипов WS2811/WS2812 на всех ступеньках. Для WS2811 кол-во чипов = кол-во светодиодов / 3
+#define STEP_AMOUNT 15        // количество ступенек
 
 // описание всех ступенек с возможностью подсветки ЛЮБЫХ ступенек в ночном режиме
 Step steps[STEP_AMOUNT] = { 
-{ 16, 0b0100100100100100 },   // первая ступенька 16 чипов, 0b0100100100100100 - каждый третий чип активен в ночном режиме
-{ 16, 0b0000000000000000 },   // вторая ступенька 16 чипов, 0b0000000000000000 - не активен в ночном режиме
-{ 16, 0b0000000000000000 },   // 3
-{ 16, 0b0000000000000000 },   // 4
-{ 16, 0b0000000000000000 },   // 5
-{ 16, 0b0000000000000000 },   // 6
-{ 16, 0b0000000000000000 },   // 7
-{ 16, 0b0000000000000000 },   // 8
-{ 16, 0b0000000000000000 },   // 9
-{ 16, 0b0000000000000000 },   // 10
-{ 16, 0b0000000000000000 },   // 11
-{ 16, 0b0000000000000000 },   // 12
-{ 16, 0b0000000000000000 },   // 13
-{ 16, 0b0000000000000000 },   // 14
-{ 16, 0b0000000000000000 },   // 15
-{ 16, 0b0100100100100100 }    // 16
+{ 16, 0b010010010010010010010 },   // первая ступенька 20 чипов, 0b010010010010010010010 - каждый третий чип активен в ночном режиме
+{ 16, 0b000000000000000000000 },   // вторая ступенька 20 чипов, 0b000000000000000000000 - не активен в ночном режиме
+{ 16, 0b000000000000000000000 },   // 3
+{ 16, 0b000000000000000000000 },   // 4
+{ 16, 0b000000000000000000000 },   // 5
+{ 16, 0b000000000000000000000 },   // 6
+{ 16, 0b000000000000000000000 },   // 7
+{ 16, 0b000000000000000000000 },   // 8
+{ 16, 0b000000000000000000000 },   // 9
+{ 16, 0b000000000000000000000 },   // 10
+{ 16, 0b000000000000000000000 },   // 11
+{ 16, 0b000000000000000000000 },   // 12
+{ 16, 0b000000000000000000000 },   // 13
+{ 16, 0b000000000000000000000 },   // 14
+{ 16, 0b010010010010010010010 }    // 15
 };
-
-#define AUTO_BRIGHT 1     // автояркость вкл(1)/выкл(0) (с фоторезистором)
+  
 #define CUSTOM_BRIGHT 100  // ручная яркость
 
 #define FADR_SPEED 300         // скорость переключения с одной ступеньки на другую, меньше - быстрее
@@ -51,19 +50,11 @@ Step steps[STEP_AMOUNT] = {
 #define NIGHT_LIGHT_BRIGHT 50  // 0 - 255 яркость ночной подсветки
 #define NIGHT_PHOTO_MAX 500   // максимальное значение фоторезистора для отключения подсветки, при освещении выше этого подсветка полностью отключается
 
-#define RAILING 0      // вкл(1)/выкл(0) - подсветка перил
-#define RAILING_LED_AMOUNT 75    // количество чипов WS2811/WS2812 на ленте перил
-
-#define BUTTON  0      // вкл(1)/выкл(0) - сенсорная кнопка переключения эффектов
-
 // пины
 // если перепутаны сенсоры - можно поменять их местами в коде! Вот тут
 #define SENSOR_START 3   // пин датчика движения
 #define SENSOR_END 2     // пин датчика движения
-#define STRIP_PIN 12     // пин ленты ступенек
-#define RAILING_PIN 11   // пин ленты перил
-#define PHOTO_PIN A0     // пин фоторезистора
-#define BUTTON_PIN 6     // пин сенсорной кнопки переключения эффектов
+#define STRIP_PIN 13     // пин ленты ступенек
 
 #define ORDER_BGR       // порядок цветов ORDER_GRB / ORDER_RGB / ORDER_BRG
 #define COLOR_DEBTH 2   // цветовая глубина: 1, 2, 3 (в байтах)
@@ -71,10 +62,6 @@ Step steps[STEP_AMOUNT] = {
 // для разработчиков
 #include <microLED.h>
 #include <FastLED.h> // ФЛ для функции Noise
-
-#if (BUTTON == 1)
-#include <GyverButton.h>
-#endif
 
 // ==== удобные макросы ====
 #define FOR_i(from, to) for(int i = (from); i < (to); i++)
@@ -87,15 +74,8 @@ Step steps[STEP_AMOUNT] = {
   if (flag)
 //===========================
 
-int railingSegmentLength = RAILING_LED_AMOUNT / STEP_AMOUNT;   // количество чипов WS2811/WS2812 на сегмент ленты перил
-
 LEDdata stripLEDs[STRIP_LED_AMOUNT];  // буфер ленты ступенек
 microLED strip(stripLEDs, STRIP_LED_AMOUNT, STRIP_PIN);  // объект лента (НЕ МАТРИЦА) из-за разного количества диодов на ступеньку!
-
-#if (RAILING == 1)
-LEDdata railingLEDs[RAILING_LED_AMOUNT];  // буфер ленты перил
-microLED railing(railingLEDs, RAILING_LED_AMOUNT, RAILING_PIN);  // объект лента
-#endif
 
 int effSpeed;
 int8_t effectDirection;
@@ -120,9 +100,6 @@ CRGBPalette16 firePalette;
 
 int8_t minStepLength = steps[0].led_amount;
 
-#if (BUTTON == 1)
-GButton button(BUTTON_PIN);
-#endif
 
 void setup() {
   Serial.begin(9600);
@@ -130,13 +107,6 @@ void setup() {
   clear();
   show();  
   
-#if (BUTTON == 1)
-  button.setType(HIGH_PULL);
-  button.setDirection(NORM_OPEN);
-  button.setDebounce(100);     // настройка антидребезга (по умолчанию 80 мс)
-  button.setTimeout(700);      // настройка таймаута на удержание (по умолчанию 500 мс)
-  button.setClickTimeout(600); // настройка таймаута между кликами (по умолчанию 300 мс)
-#endif
 
   firePalette = CRGBPalette16(
                   getFireColor(0 * 16),
@@ -170,11 +140,7 @@ void setup() {
 }
 
 void loop() {
-  handleButton();
-  handlePirSensor(&startPirSensor);
-  handlePirSensor(&endPirSensor);
   if (systemIdleState || systemOffState) {
-    handlePhotoResistor();
     handleNightLight();
     delay(50);
   } else {
@@ -183,28 +149,6 @@ void loop() {
   }
 }
 
-void handleButton() {
-#if (BUTTON == 1)
-  button.tick();
-  if (button.isClick() || button.isHolded())
-  {
-    curEffect = ++effectCounter % EFFECTS_AMOUNT;
-  }
-#endif
-}
-
-void handlePhotoResistor() {
-#if (AUTO_BRIGHT == 1)
-  EVERY_MS(3000) {            // каждые 3 сек
-    int photo = analogRead(PHOTO_PIN);
-    Serial.print("Photo resistor ");
-    Serial.println(photo);
-    systemOffState = photo > NIGHT_PHOTO_MAX;
-    curBright = systemOffState ? 0 : map(photo, 30, 800, 10, 200);
-    setBrightness(curBright);
-  }
-#endif
-}
 
 void handleNightLight() {
   EVERY_MS(60000) {
@@ -241,26 +185,6 @@ void handleTimeout() {
     }
     nightLight();
   }
-}
-
-void handlePirSensor(PirSensor *sensor) {
-  if (systemOffState) return;
-
-  int newState = digitalRead(sensor->pin);
-  if (newState && !sensor->lastState) {
-    Serial.print("PIR sensor ");
-    Serial.println(sensor->pin);
-    timeoutCounter = millis(); // при срабатывании датчика устанавливаем заново timeout
-    if (systemIdleState) {
-      effectDirection = sensor->effectDirection;
-      if (ROTATE_EFFECTS) {
-        curEffect = ++effectCounter % EFFECTS_AMOUNT;
-      }
-      stepFader(effectDirection == 1 ? 0 : 1,  0);
-      systemIdleState = false;
-    }
-  }
-  sensor->lastState = newState;
 }
 
 // крутилка эффектов в режиме активной работы
